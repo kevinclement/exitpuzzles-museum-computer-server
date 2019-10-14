@@ -1,0 +1,22 @@
+[Unit]
+Description=ExitPuzzles Zoltar node service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=7
+#StandardOutput=null
+#StandardError=null
+ExecStart=/usr/bin/node /home/pi/code/server/index.js
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=exitpuzzles-zoltar
+Environment=NODE_ENV=production
+Environment=NOBLE_REPORT_ALL_HCI_EVENTS=1
+
+[Install]
+WantedBy=multi-user.target
+
+
