@@ -3,12 +3,11 @@ let Manager = require('./manager')
 module.exports = class BirdManager extends Manager {
     constructor(opts) {
 
-        //   to scan use `hcitool scan`
-        let bt = new (require('./serial.bluetooth'))({
+        let bt = new (require('./serial.direct'))({
             name: opts.name,
-            address: '80:7D:3A:BC:D4:B6', //ExitMuseumBirdcage
-            channel: 1,
-            logger: opts.logger
+            baudRate: 115200,
+            logger: opts.logger,
+            dev: '/dev/ttyBIRD'
         });
 
         let ref = opts.fb.db.ref('museum/devices/bird')
