@@ -3,12 +3,11 @@ let Manager = require('./manager')
 module.exports = class ClockManager extends Manager {
     constructor(opts) {
 
-        // Bluetooth device name: ExitMuseumClock
-        let bt = new (require('./serial.bluetooth'))({
+        let bt = new (require('./serial.direct'))({
             name: opts.name,
-            address: '30:AE:A4:21:0E:BE', // TODO: use proper clock 
-            channel: 1,
-            logger: opts.logger
+            baudRate: 115200,
+            logger: opts.logger,
+            dev: '/dev/ttyCLOCK'
         });
 
         let ref = opts.fb.db.ref('museum/devices/clock')
@@ -35,11 +34,6 @@ module.exports = class ClockManager extends Manager {
                 } else {
                     // go ahead and update the db and let it know we're disconnected since we will time out
                     this.ref.child('info').update({ isConnected: false })
-
-                    // tell blootooth to disconnecto make reconnect faster
-                    setTimeout(() => {
-                        bt.disconnect();
-                    }, 10000) 
                 }
                 cb()
             });

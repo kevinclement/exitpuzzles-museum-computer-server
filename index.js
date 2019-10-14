@@ -3,7 +3,7 @@ let logger = new (require('./logging'))
 
 let managers = [];
 managers.push(new (require('./manager.bird'))({ name: 'bird', logger: logger, fb: fb }))
-// managers.push(new (require('./manager.clock'))({ name: 'clock', logger: logger, fb: fb }))
+managers.push(new (require('./manager.clock'))({ name: 'clock', logger: logger, fb: fb }))
 
 // might want to turn this off while doing dev, so I have a flag for it
 let ENABLE_FIREBASE_LOGS = true;
