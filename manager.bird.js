@@ -54,17 +54,8 @@ module.exports = class BirdManager extends Manager {
             });
         }
 
-        handlers['bird.play'] = (s,cb) => {
-            bt.write('play', (err) => {
-                if (err) {
-                    s.ref.update({ 'error': err });
-                }
-                cb()
-            });
-        }
-
-        handlers['bird.stop'] = (s,cb) => {
-            bt.write('stop', (err) => {
+        handlers['bird.light'] = (s,cb) => {
+            bt.write('light', (err) => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -105,9 +96,12 @@ module.exports = class BirdManager extends Manager {
                         case "lightValue": 
                             this.lightValue = parseInt(p[1])
                             break
+                        case "isLight": 
+                            this.isLight = (p[1] === 'true')
+                            break
                         case "trayOpened": 
                             this.trayOpened = (p[1] === 'true')
-                            break    
+                            break
                         case "password": 
                             this.password = p[1]
                             break
@@ -123,6 +117,7 @@ module.exports = class BirdManager extends Manager {
                 ref.update({
                     solved: this.solved,
                     lightValue: this.lightValue,
+                    isLight: this.isLight,
                     trayOpened: this.trayOpened,
                     password: this.password
                 })
@@ -140,6 +135,7 @@ module.exports = class BirdManager extends Manager {
         this.solved = false
         this.trayOpened = false
         this.lightValue = 0
+        this.isLight = true
         this.password = ""
     }
     
