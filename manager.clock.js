@@ -77,7 +77,7 @@ module.exports = class ClockManager extends Manager {
                                 break
                             case "stepper": 
                                 this.motor = (p[1] === 'true')
-                                break                                
+                                break
                         }
                     })
     
@@ -96,13 +96,26 @@ module.exports = class ClockManager extends Manager {
                 }
             });
 
+        this.db = opts.fb.db
         this.ref = ref
         this.serial = bt
         this.logger = opts.logger
 
+        this.solved = false
         this.hs = false
         this.ms = false
         this.motor = false
+
+        // listen for cabinet opening, and then turn on our motor
+        this.db.ref('museum/devices/cabinet').on('value', (snapshot) => {
+            let cabinet = snapshot.val()
+            if (cabinet == null) return
+
+            if (cabinet.info.isConnected && cabinet.solved && !this.solved && !this.motor) {
+                this.logger.log(this.logPrefix + 'cabinet open detected.  turning on clock motor...')
+                this.db.ref('museum/operations').push({ command: 'clock.motor', created: (new Date()).getTime()});
+            }
+        })
     }
     
     activity() {
