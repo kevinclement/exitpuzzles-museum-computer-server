@@ -108,7 +108,7 @@ module.exports = class ClockManager extends Manager {
             let cabinet = snapshot.val()
             if (cabinet == null) return
 
-            if (cabinet.info.isConnected && cabinet.solved && !this.solved && !this.motor) {
+            if (bt.isOpen() && this.cabinet.info.isConnected && cabinet.solved && !this.solved && !this.motor) {
                 this.logger.log(this.logPrefix + 'cabinet open detected.  turning on clock motor...')
                 this.db.ref('museum/operations').push({ command: 'clock.motor', created: (new Date()).getTime()});
             }
@@ -121,19 +121,19 @@ module.exports = class ClockManager extends Manager {
        })
     }
 
-   connecting() {
-       // NOTE: while connecting, mark device as disabled, since it defaults to that
-       this.ref.child('info').update({
-           isConnected: false
-       })
-   }
+    connecting() {
+        // NOTE: while connecting, mark device as disabled, since it defaults to that
+        this.ref.child('info').update({
+            isConnected: false
+        })
+    }
 
-   connected() {
+    connected() {
         this.bt.write('status')
 
-       this.ref.child('info').update({
-           isConnected: true,
-           lastActivity: (new Date()).toLocaleString()
-       })
+        this.ref.child('info').update({
+            isConnected: true,
+            lastActivity: (new Date()).toLocaleString()
+        })
     }
 }
