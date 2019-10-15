@@ -27,6 +27,15 @@ module.exports = class ClockManager extends Manager {
             });
         }
 
+        handlers['clock.motor'] = (s,cb) => {
+            bt.write('motor', (err) => {
+                if (err) {
+                    s.ref.update({ 'error': err });
+                }
+                cb()
+            });
+        }
+
         handlers['clock.reboot'] = (s,cb) => {
             bt.write('reboot', (err) => {
                 if (err) {
