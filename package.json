@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "sudo node index.js",
     "verbose": "sudo DEBUG=true node index.js",
+    "tail": "tail -f /var/log/syslog | grep exitpuzzles-computer-server",
     "stop": "sudo systemctl stop exitpuzzles.server.service",
     "start": "sudo systemctl start exitpuzzles.server.service",
     "restart": "sudo systemctl restart exitpuzzles.server.service",
