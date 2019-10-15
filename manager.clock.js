@@ -70,11 +70,14 @@ module.exports = class ClockManager extends Manager {
                                 this.solved = (p[1] === 'true')
                                 break
                             case "hs": 
-                                this.lights = (p[1] === 'true')
+                                this.hs = (p[1] === 'true')
                                 break
                             case "ms": 
-                                this.magnet = (p[1] === 'true')
+                                this.ms = (p[1] === 'true')
                                 break
+                            case "stepper": 
+                                this.motor = (p[1] === 'true')
+                                break                                
                         }
                     })
     
@@ -87,7 +90,8 @@ module.exports = class ClockManager extends Manager {
                     ref.update({
                         solved: this.solved,
                         hs: this.hs,
-                        ms: this.ms
+                        ms: this.ms,
+                        motor: this.motor
                     })
                 }
             });
@@ -96,9 +100,9 @@ module.exports = class ClockManager extends Manager {
         this.serial = bt
         this.logger = opts.logger
 
-        this.enabled = false
         this.hs = false
         this.ms = false
+        this.motor = false
     }
     
     activity() {
