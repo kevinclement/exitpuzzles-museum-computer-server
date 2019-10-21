@@ -108,7 +108,7 @@ module.exports = class ClockManager extends Manager {
             let cabinet = snapshot.val()
             if (cabinet == null) return
 
-            if (bt.isOpen() && this.cabinet.info.isConnected && cabinet.solved && !this.solved && !this.motor) {
+            if (cabinet.solved && !this.solved && !this.motor) {
                 this.logger.log(this.logPrefix + 'cabinet open detected.  turning on clock motor...')
                 this.db.ref('museum/operations').push({ command: 'clock.motor', created: (new Date()).getTime()});
             }
