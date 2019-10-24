@@ -2,24 +2,28 @@ let Manager = require('./manager')
 
 module.exports = class BirdManager extends Manager {
     constructor(opts) {
-
-        let bt = new (require('./serial.direct'))({
-            name: opts.name,
-            baudRate: 115200,
-            logger: opts.logger,
-            dev: '/dev/ttyBIRD'
-        });
-
-        let ref = opts.fb.db.ref('museum/devices/bird')
-
         let incoming = [];
         let handlers = {};
 
-        super({ ...opts, bt: bt, handlers: handlers, incoming:incoming })
+        let ref = opts.fb.db.ref('museum/devices/bird')
+
+        super({ 
+            ...opts,
+            ref: ref,
+            dev:'/dev/ttyBIRD',
+            baudRate: 115200,
+            handlers: handlers,
+            incoming:incoming,
+        })
+
+        // ask for status once we connect
+        this.on('connected', () => {
+            this.write('status')
+        });
 
         // setup supported commands
         handlers['bird.open'] = (s,cb) => {
-            bt.write('solve', (err) => {
+            this.write('solve', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -28,7 +32,7 @@ module.exports = class BirdManager extends Manager {
         }
 
         handlers['bird.close'] = (s,cb) => {
-            bt.write('close', (err) => {
+            this.write('close', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -37,7 +41,7 @@ module.exports = class BirdManager extends Manager {
         }
 
         handlers['bird.back'] = (s,cb) => {
-            bt.write('back', (err) => {
+            this.write('back', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -46,7 +50,7 @@ module.exports = class BirdManager extends Manager {
         }
 
         handlers['bird.forward'] = (s,cb) => {
-            bt.write('forward', (err) => {
+            this.write('forward', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -55,7 +59,7 @@ module.exports = class BirdManager extends Manager {
         }
 
         handlers['bird.light'] = (s,cb) => {
-            bt.write('light', (err) => {
+            this.write('light', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -64,7 +68,7 @@ module.exports = class BirdManager extends Manager {
         }
 
         handlers['bird.reboot'] = (s,cb) => {
-            bt.write('reboot', (err) => {
+            this.write('reboot', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 } 
@@ -74,59 +78,55 @@ module.exports = class BirdManager extends Manager {
 
         // setup supported device output parsing
         incoming.push(
-        {
-            pattern:/.*status=(.*)/,
-            match: (m) => {
-                m[1].split(',').forEach((s)=> {
-                    let p = s.split(/:(.+)/);
-                    switch(p[0]) {
-                        case "version": 
-                            this.version = p[1]
-                            break
-                        case "gitDate": 
-                            this.gitDate = p[1]
-                            break 
-                        case "buildDate": 
-                            this.buildDate = p[1]
-                            break
+            {
+                pattern:/.*status=(.*)/,
+                match: (m) => {
+                    m[1].split(',').forEach((s)=> {
+                        let p = s.split(/:(.+)/);
+                        switch(p[0]) {
+                            case "version": 
+                                this.version = p[1]
+                                break
+                            case "gitDate": 
+                                this.gitDate = p[1]
+                                break 
+                            case "buildDate": 
+                                this.buildDate = p[1]
+                                break
 
-                        case "solved": 
-                            this.solved = (p[1] === 'true')
-                            break
-                        case "lightValue": 
-                            this.lightValue = parseInt(p[1])
-                            break
-                        case "isLight": 
-                            this.isLight = (p[1] === 'true')
-                            break
-                        case "trayOpened": 
-                            this.trayOpened = (p[1] === 'true')
-                            break
-                        case "password": 
-                            this.password = p[1]
-                            break
-                    }
-                })
-
-                ref.child('info/build').update({
-                    version: this.version,
-                    date: this.buildDate,
-                    gitDate: this.gitDate
-                })
-
-                ref.update({
-                    solved: this.solved,
-                    lightValue: this.lightValue,
-                    isLight: this.isLight,
-                    trayOpened: this.trayOpened,
-                    password: this.password
-                })
-            }
-        });
-
-        this.ref = ref
-        this.serial = bt
-        this.logger = opts.logger
+                            case "solved": 
+                                this.solved = (p[1] === 'true')
+                                break
+                            case "lightValue": 
+                                this.lightValue = parseInt(p[1])
+                                break
+                            case "isLight": 
+                                this.isLight = (p[1] === 'true')
+                                break
+                            case "trayOpened": 
+                                this.trayOpened = (p[1] === 'true')
+                                break
+                            case "password": 
+                                this.password = p[1]
+                                break
+                        }
+                    })
+    
+                    ref.child('info/build').update({
+                        version: this.version,
+                        date: this.buildDate,
+                        gitDate: this.gitDate
+                    })
+    
+                    ref.update({
+                        solved: this.solved,
+                        lightValue: this.lightValue,
+                        isLight: this.isLight,
+                        trayOpened: this.trayOpened,
+                        password: this.password
+                    })
+                }
+            });
 
         this.version = "unknown"
         this.gitDate = "unknown"
@@ -137,27 +137,8 @@ module.exports = class BirdManager extends Manager {
         this.lightValue = 0
         this.isLight = true
         this.password = ""
-    }
-    
-    activity() {
-        this.ref.child('info').update({
-            lastActivity: (new Date()).toLocaleString()
-       })
-    }
 
-    connecting() {
-       // NOTE: while connecting, mark device as disabled, since it defaults to that
-       this.ref.child('info').update({
-           isConnected: false
-       })
-    }
-
-    connected() {
-        this.bt.write('status');
-
-        this.ref.child('info').update({
-            isConnected: true,
-            lastActivity: (new Date()).toLocaleString()
-        })
+        // now connect to serial
+        this.connect()
     }
 }

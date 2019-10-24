@@ -98,7 +98,6 @@ module.exports = class ClockManager extends Manager {
             });
 
         this.db = opts.fb.db
-        this.ref = ref
         this.logger = opts.logger
 
         this.solved = false
