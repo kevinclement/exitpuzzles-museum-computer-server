@@ -13,6 +13,7 @@ module.exports = class Manager extends EventEmitter {
         this.name = opts.name
         this.logPrefix = 'handler: ' + opts.name + ': '
         this.created = (new Date()).getTime()
+        this.ref = opts.ref
 
         // setup serial
         const parser = this.port.pipe(new Readline({ delimiter: '\r\n' }));
@@ -20,6 +21,13 @@ module.exports = class Manager extends EventEmitter {
         // setup serial events
         this.port.on('open', () => {
             this.logger.log(this.logPrefix + `Serial opened.`)
+            
+            // mark in db as connected
+            this.ref.child('info').update({
+                isConnected: true,
+                lastActivity: (new Date()).toLocaleString()
+            })
+
             this.emit('connected')
         })
         this.port.on('error', (e) => {
@@ -31,17 +39,27 @@ module.exports = class Manager extends EventEmitter {
         })
 
         parser.on('data', d => { this.data(d) });
+
+        // mark in db not connected before we connect
+        this.ref.child('info').update({
+            isConnected: false
+        })
     }
 
     connect() {
-        this.emit('connecting')
         this.port.open()
+    }
+
+    activity() {
+        this.ref.child('info').update({
+            lastActivity: (new Date()).toLocaleString()
+       })
     }
 
     data(line) {
         this.logger.log(this.logPrefix + '< ' + line);
         try {
-            this.emit('activity')
+            this.activity()
 
             // handle the line now
             let lineHandled = false
@@ -93,7 +111,7 @@ module.exports = class Manager extends EventEmitter {
               snapshot.ref.update({ 'received': (new Date()).toString() });
 
               this.handlers[hp](snapshot, () => {
-                this.emit('activity')
+                this.activity()
                 snapshot.ref.update({ 'completed': (new Date()).toString() });
               })
             }

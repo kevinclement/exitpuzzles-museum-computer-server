@@ -5,34 +5,21 @@ module.exports = class ClockManager extends Manager {
         let incoming = [];
         let handlers = {};
 
+        let ref = opts.fb.db.ref('museum/devices/clock')
+
         super({ 
             ...opts,
+            ref: ref,
             dev:'/dev/ttyCLOCK',
             baudRate: 115200,
             handlers: handlers,
-            incoming:incoming
+            incoming:incoming,
         })
 
-        // hookup base events
-        this.on('connecting', () => {
-            this.ref.child('info').update({
-                isConnected: false
-            })
-        });
+        // ask for status once we connect
         this.on('connected', () => {
             this.write('status')
-            this.ref.child('info').update({
-                isConnected: true,
-                lastActivity: (new Date()).toLocaleString()
-            })
         });
-        this.on('activity', () => {
-            this.ref.child('info').update({
-                lastActivity: (new Date()).toLocaleString()
-           })
-        })
-
-        let ref = opts.fb.db.ref('museum/devices/clock')
 
         // setup supported commands
         handlers['clock.open'] = (s,cb) => {
