@@ -110,6 +110,11 @@ module.exports = class BirdManager extends Manager {
                                 this.password = p[1]
                                 break
                         }
+
+                        // special case for empty password
+                        if (p[0] == 'password:' && !p[1]) {
+                            this.password = ''
+                        }
                     })
     
                     ref.child('info/build').update({
