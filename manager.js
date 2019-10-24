@@ -1,108 +1,47 @@
-module.exports = class Manager {
+const EventEmitter = require('events');
+const SerialPort = require('serialport')
+const Readline = require('@serialport/parser-readline')
+const Delimiter = require('@serialport/parser-delimiter')
+
+module.exports = class Manager extends EventEmitter {
     constructor(opts) {
+        super()
         this.logger = opts.logger
-        this.bt = opts.bt
-        this.bluetoothEnabled = opts.bt != null
-        this.fb = opts.fb
+        this.port = new SerialPort(opts.dev, { baudRate:opts.baudRate, autoOpen:false });
         this.handlers = opts.handlers
         this.incoming = opts.incoming
         this.name = opts.name
         this.logPrefix = 'handler: ' + opts.name + ': '
         this.created = (new Date()).getTime()
 
-        // only run one operation at a time to reduce bluetooth craziness
-        this.runningOp = null
+        // setup serial
+        const parser = this.port.pipe(new Readline({ delimiter: '\r\n' }));
 
-        // queue for operations to execute
-        this.operations = []
-
-        // bind this proper for timer
-        this.loop = this.loop.bind(this)
-        this.output = this.output.bind(this)
-
-        // hookup buffer line parser
-        if (this.bluetoothEnabled) { 
-            this.bt.setOutputCallback(this.output);
-        }
-
-        // main loop to process operations
-        setInterval(this.loop, 100)
-    }
-
-    loop() {
-        try {
-            // check if we need to connect to bluetooth
-            //   either because its the first time or because we had a timeout
-            if (this.bluetoothEnabled && !this.bt.isOpen() && !this.bt.isConnecting()) {
-                this.connecting();
-
-                this.bt.connect(() => {
-                    // callback for connected
-                    this.connected();
-
-                    // remove any pending operations (by design/user ask)
-                    this.clearOperations()
-                })
-                return;
-            }
-
-            if (this.operations.length === 0 || 
-                this.runningOp || 
-                (this.bluetoothEnabled && this.bt.isConnecting())) return
-
-            // this means we're connected and have operations to run
-            let snapshot = this.operations.shift()
-            let op = snapshot.val()
-
-            // if the operation was in the db before we started, clear it out
-            if (op.created < this.created) {
-                this.cancelOperation(snapshot, 'older')
-                return
-            }
-
-            Object.keys(this.handlers).forEach((hp) => {
-                if (snapshot.val().command == hp) {
-                  this.runningOp = snapshot
-                  this.logger.log(this.logPrefix + 'handling ' + op.command + ' ...')
-
-                  // mark it received since all handlers would need to do it
-                  snapshot.ref.update({ 'received': (new Date()).toString() });
-
-                  this.handlers[hp](snapshot, () => {
-                    this.activity()
-                    snapshot.ref.update({ 'completed': (new Date()).toString() });
-                    this.runningOp = null;
-                  })
-                }
-            })
-        } catch(e) {
-            this.logger.logger.error(this.logPrefix + 'Exception: ' + e.message);
-        }
-    }
-
-    clearOperations() {
-        if (this.runningOp) {
-            this.cancelOperation(this.runningOp, 'running')
-            this.runningOp = null
-        }
-
-        // mark all pending operations as canceled as well
-        this.operations.forEach(snapshot => {
-            this.cancelOperation(snapshot, 'pending')
+        // setup serial events
+        this.port.on('open', () => {
+            this.logger.log(this.logPrefix + `Serial opened.`)
+            this.emit('connected')
         })
-        this.operations = []
+        this.port.on('error', (e) => {
+            this.logger.logger.error(this.logPrefix + `ERROR: ${e}`)
+            this.emit('error', e)
+        });
+        this.port.on('close', () => {
+            this.logger.log(this.logPrefix + `Serial closed.`)
+        })
+
+        parser.on('data', d => { this.data(d) });
     }
 
-    cancelOperation(snapshot, src) {
-        let now = (new Date()).toString()
-
-        this.logger.log(this.logPrefix + 'canceling ' + src + ' op \'' + snapshot.val().command + '\'.')
-        snapshot.ref.update({ 'completed': now, 'canceled': now })
+    connect() {
+        this.emit('connecting')
+        this.port.open()
     }
 
-    output(line) {
+    data(line) {
+        this.logger.log(this.logPrefix + '< ' + line);
         try {
-            this.activity()
+            this.emit('activity')
 
             // handle the line now
             let lineHandled = false
@@ -123,12 +62,50 @@ module.exports = class Manager {
         }
     }
 
+    write(msg, callback) {
+        this.logger.log(this.logPrefix + '> ' + msg);
+
+        this.port.write(msg + '\n')
+        this.port.drain(callback)
+    }   
+
+    cancelOperation(snapshot, src) {
+        let now = (new Date()).toString()
+
+        this.logger.log(this.logPrefix + 'canceling ' + src + ' op \'' + snapshot.val().command + '\'.')
+        snapshot.ref.update({ 'completed': now, 'canceled': now })
+    }
+
+    operation(snapshot) {
+        let op = snapshot.val()
+
+        // if the operation was in the db before we started, clear it out
+        if (op.created < this.created) {
+            this.cancelOperation(snapshot, 'older')
+            return
+        }
+
+        Object.keys(this.handlers).forEach((hp) => {
+            if (op.command == hp) {
+              this.logger.log(this.logPrefix + 'handling ' + op.command + ' ...')
+
+              // mark it received since all handlers would need to do it
+              snapshot.ref.update({ 'received': (new Date()).toString() });
+
+              this.handlers[hp](snapshot, () => {
+                this.emit('activity')
+                snapshot.ref.update({ 'completed': (new Date()).toString() });
+              })
+            }
+        })
+    }
+
     handle(snapshot) {
 
         // only push operations that can be handled by this manager
         Object.keys(this.handlers).forEach((hp) => {
             if (snapshot.val().command == hp) {
-                this.operations.push(snapshot)
+                this.operation(snapshot)
             }
         })
     }

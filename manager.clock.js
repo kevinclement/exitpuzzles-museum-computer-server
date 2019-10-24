@@ -2,24 +2,41 @@ let Manager = require('./manager')
 
 module.exports = class ClockManager extends Manager {
     constructor(opts) {
-
-        let bt = new (require('./serial.direct'))({
-            name: opts.name,
-            baudRate: 115200,
-            logger: opts.logger,
-            dev: '/dev/ttyCLOCK'
-        });
-
-        let ref = opts.fb.db.ref('museum/devices/clock')
-
         let incoming = [];
         let handlers = {};
 
-        super({ ...opts, bt: bt, handlers: handlers, incoming:incoming })
+        super({ 
+            ...opts,
+            dev:'/dev/ttyCLOCK',
+            baudRate: 115200,
+            handlers: handlers,
+            incoming:incoming
+        })
+
+        // hookup base events
+        this.on('connecting', () => {
+            this.ref.child('info').update({
+                isConnected: false
+            })
+        });
+        this.on('connected', () => {
+            this.write('status')
+            this.ref.child('info').update({
+                isConnected: true,
+                lastActivity: (new Date()).toLocaleString()
+            })
+        });
+        this.on('activity', () => {
+            this.ref.child('info').update({
+                lastActivity: (new Date()).toLocaleString()
+           })
+        })
+
+        let ref = opts.fb.db.ref('museum/devices/clock')
 
         // setup supported commands
         handlers['clock.open'] = (s,cb) => {
-            bt.write('solve', (err) => {
+            this.write('solve', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -28,7 +45,7 @@ module.exports = class ClockManager extends Manager {
         }
 
         handlers['clock.motor'] = (s,cb) => {
-            bt.write('motor', (err) => {
+            this.write('motor', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -37,7 +54,7 @@ module.exports = class ClockManager extends Manager {
         }
 
         handlers['clock.reboot'] = (s,cb) => {
-            bt.write('reboot', (err) => {
+            this.write('reboot', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -95,7 +112,6 @@ module.exports = class ClockManager extends Manager {
 
         this.db = opts.fb.db
         this.ref = ref
-        this.serial = bt
         this.logger = opts.logger
 
         this.solved = false
@@ -113,27 +129,8 @@ module.exports = class ClockManager extends Manager {
                 this.db.ref('museum/operations').push({ command: 'clock.motor', created: (new Date()).getTime()});
             }
         })
-    }
-    
-    activity() {
-        this.ref.child('info').update({
-            lastActivity: (new Date()).toLocaleString()
-       })
-    }
 
-    connecting() {
-        // NOTE: while connecting, mark device as disabled, since it defaults to that
-        this.ref.child('info').update({
-            isConnected: false
-        })
-    }
-
-    connected() {
-        this.bt.write('status')
-
-        this.ref.child('info').update({
-            isConnected: true,
-            lastActivity: (new Date()).toLocaleString()
-        })
+        // now connect to serial
+        this.connect()
     }
 }
