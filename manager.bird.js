@@ -16,6 +16,8 @@ module.exports = class BirdManager extends Manager {
             incoming:incoming,
         })
 
+        this.db = opts.fb.db
+
         // ask for status once we connect
         this.on('connected', () => {
             this.write('status')
@@ -103,6 +105,9 @@ module.exports = class BirdManager extends Manager {
                             case "isLight": 
                                 this.isLight = (p[1] === 'true')
                                 break
+                            case "darkDetection":
+                                this.darkDetection = (p[1] === 'true')
+                                break
                             case "trayOpened": 
                                 this.trayOpened = (p[1] === 'true')
                                 break
@@ -116,6 +121,8 @@ module.exports = class BirdManager extends Manager {
                             this.password = ''
                         }
                     })
+
+                    this.initialStatusReceived = true
     
                     ref.child('info/build').update({
                         version: this.version,
@@ -127,6 +134,7 @@ module.exports = class BirdManager extends Manager {
                         solved: this.solved,
                         lightValue: this.lightValue,
                         isLight: this.isLight,
+                        darkDetection: this.darkDetection,
                         trayOpened: this.trayOpened,
                         password: this.password
                     })
@@ -137,11 +145,33 @@ module.exports = class BirdManager extends Manager {
         this.gitDate = "unknown"
         this.buildDate = "unknown"
 
+        this.initialStatusReceived = false
         this.solved = false
         this.trayOpened = false
         this.lightValue = 0
         this.isLight = true
+        this.darkDetection = true
         this.password = ""
+
+        // listen for hands, and disable dark detection
+        this.db.ref('museum/devices/hands').on('value', (snapshot) => {
+
+            // ignore this if we haven't receieved for status
+            if (!this.initialStatusReceived) return
+
+            let hands = snapshot.val()
+            if (hands == null) return
+
+            if ((hands.touching || hands.toggle) && this.darkDetection) {
+                this.logger.log(this.logPrefix + 'hands detected.  disabling dark detection...')
+                this.darkDetection = false
+            }
+
+            if (!hands.touching && !hands.toggle && !this.darkDetection) {
+                this.logger.log(this.logPrefix + 'hands not touching.  enabling dark detection...')
+                this.darkDetection = true
+            }
+        })
 
         // now connect to serial
         this.connect()
