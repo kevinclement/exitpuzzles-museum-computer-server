@@ -164,12 +164,15 @@ module.exports = class BirdManager extends Manager {
 
             if ((hands.touching || hands.toggle) && this.darkDetection) {
                 this.logger.log(this.logPrefix + 'hands detected.  disabling dark detection...')
+                // need to flip the bit otherwise we can get into race with toggling
                 this.darkDetection = false
+                this.write('darkDetect')
             }
 
             if (!hands.touching && !hands.toggle && !this.darkDetection) {
                 this.logger.log(this.logPrefix + 'hands not touching.  enabling dark detection...')
                 this.darkDetection = true
+                this.write('darkDetect')
             }
         })
 
