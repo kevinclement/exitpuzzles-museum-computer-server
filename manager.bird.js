@@ -17,6 +17,8 @@ module.exports = class BirdManager extends Manager {
         })
 
         this.db = opts.fb.db
+        this.run = opts.run
+        this.forced = false
 
         // ask for status once we connect
         this.on('connected', () => {
@@ -25,6 +27,7 @@ module.exports = class BirdManager extends Manager {
 
         // setup supported commands
         handlers['bird.open'] = (s,cb) => {
+            this.forced = true
             this.write('solve', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
@@ -70,6 +73,7 @@ module.exports = class BirdManager extends Manager {
         }
 
         handlers['bird.reboot'] = (s,cb) => {
+            this.forced = false
             this.write('reboot', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
@@ -97,7 +101,11 @@ module.exports = class BirdManager extends Manager {
                                 break
 
                             case "solved": 
-                                this.solved = (p[1] === 'true')
+                                let _solved = (p[1] === 'true')
+                                if (_solved && !this.solved) {
+                                    this.run.birdSolved(this.forced)
+                                }
+                                this.solved = _solved
                                 break
                             case "lightValue": 
                                 this.lightValue = parseInt(p[1])

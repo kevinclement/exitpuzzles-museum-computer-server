@@ -1,9 +1,10 @@
 let fb = new (require('./firebase'))
 let logger = new (require('./logging'))
+let run = new (require('./run'))({ logger: logger, db:fb.db })
 
 let managers = [];
-managers.push(new (require('./manager.bird'))({ name: 'bird', logger: logger, fb: fb }))
-managers.push(new (require('./manager.clock'))({ name: 'clock', logger: logger, fb: fb }))
+managers.push(new (require('./manager.bird'))({ name: 'bird', logger: logger, fb: fb, run:run }))
+managers.push(new (require('./manager.clock'))({ name: 'clock', logger: logger, fb: fb, run:run }))
 
 // might want to turn this off while doing dev, so I have a flag for it
 let ENABLE_FIREBASE_LOGS = true;
