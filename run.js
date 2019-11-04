@@ -8,11 +8,14 @@ module.exports = class Runs {
         opts.db.ref('museum/runs').orderByKey().limitToLast(2000).on('value', (snapshot) => {
             let latest = undefined;
             for (const [date, run] of Object.entries(snapshot.val())) {
-                latest = run
+                if (run.finished == "") {
+                    latest = date
+                }
             }
 
-            if (latest.finished == "") {
-                this.run = opts.db.ref('museum/runs').child(latest.started)
+            if (latest) {
+                this.logger.log(this.logPrefix + `using ${latest} for run analytics.`)
+                this.run = opts.db.ref('museum/runs').child(latest)
             } else {
                 this.run = undefined
             }
