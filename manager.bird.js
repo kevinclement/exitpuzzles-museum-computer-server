@@ -183,8 +183,8 @@ module.exports = class BirdManager extends Manager {
                 this.darkDetection = true
                 this.enableDarkDetectionTimer = setTimeout(() => {
                     this.logger.log(this.logPrefix + 'waited long enough for lights to come back, sending darkDetect cmd.')
-                    this.write('darkDetect')    
-                }, 4000);
+                    this.write('darkDetect')
+                }, 10000);
             }
         })
 
