@@ -175,15 +175,15 @@ module.exports = class BirdManager extends Manager {
                 // need to flip the bit otherwise we can get into race with toggling
                 this.darkDetection = false
                 clearTimeout(this.enableDarkDetectionTimer)
-                this.write('darkDetect')
+                this.write('darkOff')
             }
 
             if (!hands.touching && !hands.toggle && !this.darkDetection) {
                 this.logger.log(this.logPrefix + 'hands not touching.  enabling dark detection...')
                 this.darkDetection = true
                 this.enableDarkDetectionTimer = setTimeout(() => {
-                    this.logger.log(this.logPrefix + 'waited long enough for lights to come back, sending darkDetect cmd.')
-                    this.write('darkDetect')
+                    this.logger.log(this.logPrefix + 'waited long enough for lights to come back, sending darkOn cmd.')
+                    this.write('darkOn')
                 }, 10000);
             }
         })
