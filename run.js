@@ -5,13 +5,15 @@ module.exports = class Runs {
         this.logger = opts.logger
         this.logPrefix =  'run: '
 
-        opts.db.ref('museum/runs').orderByKey().limitToLast(2000).on('value', (snapshot) => {
+        opts.db.ref('museum/runs').orderByChild('timestamp').limitToLast(2000).on('value', (snapshot) => {
             let latest = undefined;
-            for (const [date, run] of Object.entries(snapshot.val())) {
+            snapshot.forEach(function(runSnap) {
+                let run = runSnap.val()
+                let key = runSnap.key
                 if (run.finished == "") {
-                    latest = date
+                    latest = key
                 }
-            }
+            })
 
             if (latest) {
                 this.logger.log(this.logPrefix + `using ${latest} for run analytics.`)
