@@ -46,6 +46,11 @@ module.exports = class ClockManager extends Manager {
             });
         }
 
+        handlers['clock.hour']    = (s,cb) => { this.write('hour',    err => { if (err) { s.ref.update({ 'error': err }); } cb() }); }
+        handlers['clock.hourDec'] = (s,cb) => { this.write('hourDec', err => { if (err) { s.ref.update({ 'error': err }); } cb() }); }
+        handlers['clock.minute']  = (s,cb) => { this.write('minute',  err => { if (err) { s.ref.update({ 'error': err }); } cb() }); }
+        handlers['clock.minDec']  = (s,cb) => { this.write('minDec',  err => { if (err) { s.ref.update({ 'error': err }); } cb() }); }
+
         handlers['clock.reboot'] = (s,cb) => {
             this.forced = false
             this.write('reboot', err => {
