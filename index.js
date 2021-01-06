@@ -9,7 +9,7 @@ managers.push(new (require('./manager.clock'))({ name: 'clock', logger: logger, 
 // might want to turn this off while doing dev, so I have a flag for it
 let ENABLE_FIREBASE_LOGS = true;
 if (ENABLE_FIREBASE_LOGS) {
-    logger.enableFirebase(fb.db);
+  logger.enableFirebase(fb.db, 'museum/logs/comp');
 }
 
 logger.log('comp: Started ExitPuzzles Computer server.');

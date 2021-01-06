@@ -11,12 +11,13 @@ module.exports = class WinstonFirebase extends Transport {
     super(opts);
 
     this.db = opts.db;
+    this.path = opts.path;
   }
 
   log(info, callback) {
     let line = info[Symbol.for('message')];
 
-    this.db.ref('museum').child('logs').push({
+    this.db.ref(this.path).push({
          timestamp: (new Date()).toString(),
          data: line
     });
