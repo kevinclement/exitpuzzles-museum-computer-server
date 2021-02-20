@@ -37,8 +37,8 @@ module.exports = class ClockManager extends Manager {
             });
         }
 
-        handlers['clock.motor'] = (s,cb) => {
-            this.write('motor', err => {
+        handlers['clock.encoder'] = (s,cb) => {
+            this.write('encoder', err => {
                 if (err) {
                     s.ref.update({ 'error': err });
                 }
@@ -92,9 +92,15 @@ module.exports = class ClockManager extends Manager {
                             case "ms": 
                                 this.ms = (p[1] === 'true')
                                 break
-                            case "stepper": 
-                                this.motor = (p[1] === 'true')
-                                break
+                            case "hourMotor": 
+                                this.hourMotorPos = p[1]
+                                break;
+                            case "minuteMotor": 
+                                this.minMotorPos = p[1]
+                                break;
+                            case "encoder": 
+                                this.encoder = (p[1] === 'true')
+                                break;
                         }
                     })
     
@@ -108,7 +114,9 @@ module.exports = class ClockManager extends Manager {
                         solved: this.solved,
                         hs: this.hs,
                         ms: this.ms,
-                        motor: this.motor
+                        hourMotorPos: this.hourMotorPos,
+                        minMotorPos: this.minMotorPos,
+                        encoder: this.encoder,
                     })
                 }
             });
@@ -116,18 +124,9 @@ module.exports = class ClockManager extends Manager {
         this.solved = false
         this.hs = false
         this.ms = false
-        this.motor = false
-
-        // listen for cabinet opening, and then turn on our motor
-        this.db.ref('museum/devices/cabinet').on('value', (snapshot) => {
-            let cabinet = snapshot.val()
-            if (cabinet == null) return
-
-            if (cabinet.solved && !this.solved && !this.motor) {
-                this.logger.log(this.logPrefix + 'cabinet open detected.  turning on clock motor...')
-                this.db.ref('museum/operations').push({ command: 'clock.motor', created: (new Date()).getTime()});
-            }
-        })
+        this.hourMotorPos = 0
+        this.minMotorPos = 0
+        this.encoder = true
 
         // now connect to serial
         this.connect()
